@@ -337,7 +337,7 @@ HTML_TEMPLATE = """
     {% endif %}
   </main>
 
-  <div class="app-version" id="app_version">v6cce2c3</div>
+  <div class="app-version" id="app_version">v1.3.3</div>
 
   <script>
     // 서버에서 내려준 KRW 기준 환율표(기준 타입별).
@@ -361,12 +361,13 @@ HTML_TEMPLATE = """
 
 
     
-            const DEFAULT_UI_VERSION = '6cce2c3';
-    const UI_VERSION = (new URLSearchParams(window.location.search)).get('v') || DEFAULT_UI_VERSION;
+            const UI_SEMVER = '1.3.3';
+    const UI_GIT = 'b462d73';
+    const UI_VERSION = (new URLSearchParams(window.location.search)).get('ver') || (new URLSearchParams(window.location.search)).get('v') || UI_SEMVER;
 const appVersionEl = document.getElementById("app_version");
         if (appVersionEl) {
           appVersionEl.textContent = `v${UI_VERSION}`;
-          appVersionEl.title = `build ${UI_BUILD}`;
+          appVersionEl.title = `v${UI_VERSION} (${UI_GIT}) • build ${UI_BUILD}`;
         }
 
     function updateKeyboardClass() {
@@ -895,6 +896,8 @@ if __name__ == "__main__":
     debug = os.getenv("DEBUG", "").strip() in {"1", "true", "True", "yes", "YES"}
 
     app.run(host=host, port=port, debug=debug)
+
+
 
 
 
