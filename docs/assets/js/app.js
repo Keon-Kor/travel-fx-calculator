@@ -523,10 +523,11 @@ loadSnapshot()
   .catch((e) => {
     if (errorEl) {
       errorEl.style.display = "block";
-      errorEl.textContent = `환율 데이터를 불러오지 못했습니다: ${e.message}`;
+      errorEl.textContent = `환율 데이터를 불러오지 못했습니다: ${(e && e.message) ? e.message : "알 수 없는 오류"}`;
     }
     setVersionPill(null);
   });
+
 
 
 

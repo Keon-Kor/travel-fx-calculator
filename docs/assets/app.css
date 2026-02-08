@@ -52,13 +52,13 @@ h1 {
 }
 
 .toolbar {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+  row-gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
   margin: 14px 0 10px;
 }
-
 .toolbar button, .toolbar select {
   border: 1px solid rgba(47, 124, 255, 0.22);
   border-radius: 12px;
@@ -232,11 +232,55 @@ body.kbd-open .saved { margin-top: 12px; border: 1px solid rgba(47, 124, 255, 0.
   .field { grid-template-columns: 1fr; }
   .toolbar .count { width: 100%; }
 }
+.toolbar-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
 
-\n#save_calc { margin-left: auto; }\n
+.toolbar .count {
+  white-space: nowrap;
+}
 
-\n.saved { margin-top: 12px; border: 1px solid rgba(47, 124, 255, 0.18); border-radius: 16px; background: rgba(255,255,255,0.65); padding: 14px; width: 100%; }\n.history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }\n.history-title { font-weight: 900; color: rgba(11,27,58,0.72); }\n
+#save_calc {
+  justify-self: end;
+}
 
-\n.toolbar-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }\n#save_calc { margin-left: auto; min-width: 160px; height: 50px; }\n
+/* History box (records) */
+.saved {
+  margin-top: 12px;
+  border: 1px solid rgba(47, 124, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.65);
+  padding: 14px;
+  width: 100%;
+}
 
-.error:empty { display: none; }\n
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.history-title {
+  font-weight: 900;
+  color: rgba(11,27,58,0.72);
+}
+
+/* Keep "danger" actions visually consistent (no red outline) */
+.saved-btn.danger {
+  border-color: rgba(47, 124, 255, 0.22);
+}
+
+/* If something toggles the error box but doesn't set text, don't show an empty red bar. */
+.error:empty { display: none; }
+
+@media (max-width: 760px) {
+  .toolbar { grid-template-columns: 1fr; }
+  #save_calc { justify-self: stretch; width: 100%; }
+}
+
