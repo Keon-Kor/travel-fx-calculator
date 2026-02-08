@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -85,7 +85,7 @@
     }
     .currency-row { display: flex; align-items: center; gap: 10px; }
     .flag-big { width: 34px; text-align: center; font-size: 22px; line-height: 1; user-select: none; }
-    .field input, .field select {
+    \.field input, \.field select {`r`n      font-variant-numeric: tabular-nums;`r`n      text-align: right;
       width: 100%;
       border: 1px solid #c9dafd;
       border-radius: 10px;
@@ -205,10 +205,11 @@
     }
 
     function toInputValue(value) {
-      if (!Number.isFinite(value) || value < 0) return "0";
-      const normalized = value.toFixed(4).replace(/\\.?0+$/, "");
+      // Always show 2 decimals by default (ex: 0.00) for consistent readability.
+      if (!Number.isFinite(value) || value < 0) return "0.00";
+      const normalized = value.toFixed(2);
       const parts = normalized.split(".");
-      parts[0] = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
       return parts.join(".");
     }
 
@@ -283,8 +284,8 @@
       inp.type = "text";
       inp.inputMode = "decimal";
       inp.id = `amount_${i + 1}`;
-      inp.value = "0";
-      inp.placeholder = "0";
+      inp.value = "0.00";
+      inp.placeholder = "0.00";
 
       right.appendChild(label2);
       right.appendChild(inp);
@@ -328,11 +329,25 @@
       return ok;
     }
 
-    function updateFrom(ratesByType, fields, index, preserveSourceCaret = false, sourceOldText = "", sourceOldCaret = 0) {
-      if (isSyncing) return;
-      isSyncing = true;
+    
+    function formatRateValue(value) {
+      // For rate display, 4 decimals is useful for smaller currencies (ex: JPY/VND).
+      if (!Number.isFinite(value) || value <= 0) return "-";
+      const s = value.toFixed(4);
+      const parts = s.split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      return parts.join(".");
+    }
 
-      const activeFields = fields.slice(0, activeCount);
+    function renderMeta(data, ratesByType) {
+      const typeLabel = rateTypeSelect.options[rateTypeSelect.selectedIndex]?.textContent ?? "";
+      const r = currentRates(ratesByType);
+      const lines = (data.currencies || [])
+        .filter((c) => c.code !== "KRW")
+        .map((c) => `${c.flag} 1 ${c.code} = ${formatRateValue(r[c.code])} KRW`)
+        .join("<br/>");
+
+      renderMeta(data, ratesByType);
       const source = activeFields[index];
       if (!source) { isSyncing = false; return; }
       const sourceCode = source.sel.value;
@@ -398,7 +413,7 @@
           const parsed = parseEditableNumber(f.inp.value);
           lastEditedIndex = idx;
           if (parsed.empty) {
-            f.inp.value = "0";
+            f.inp.value = "0.00";
             updateFrom(ratesByType, fields, idx);
             return;
           }
@@ -432,7 +447,8 @@
 
       rateTypeSelect.addEventListener("change", () => {
         applyEnabledState(ratesByType, fields);
-        const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+        
+        renderMeta(data, ratesByType);const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
         updateFrom(ratesByType, fields, sourceIndex);
       });
       addFieldBtn.addEventListener("click", () => {
@@ -466,3 +482,8 @@
   </script>
 </body>
 </html>
+
+
+
+
+
