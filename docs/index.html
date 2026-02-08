@@ -86,11 +86,10 @@
     .currency-row { display: flex; align-items: center; gap: 10px; }
     .flag-big {
       width: 40px;
-      text-align: center;
-      font-size: 24px;
-      line-height: 1;
+      height: 28px;
+      object-fit: contain;
+      display: block;
       user-select: none;
-      font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     }
     .field input, .field select {
       width: 100%;
@@ -177,6 +176,26 @@
     const grid = document.getElementById("grid");
     const meta = document.getElementById("meta");
     const errorEl = document.getElementById("error");
+
+    const TWEMOJI_SVG_BASE = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/";
+    const FLAG_SVG = {
+      KRW: "1f1f0-1f1f7", // 🇰🇷
+      USD: "1f1fa-1f1f8", // 🇺🇸
+      CNY: "1f1e8-1f1f3", // 🇨🇳
+      PHP: "1f1f5-1f1ed", // 🇵🇭
+      TWD: "1f1f9-1f1fc", // 🇹🇼
+      JPY: "1f1ef-1f1f5", // 🇯🇵
+      VND: "1f1fb-1f1f3", // 🇻🇳
+      THB: "1f1f9-1f1ed", // 🇹🇭
+      EUR: "1f1ea-1f1fa", // 🇪🇺
+      AUD: "1f1e6-1f1fa", // 🇦🇺
+    };
+
+    function flagUrl(code) {
+      const file = FLAG_SVG[code];
+      return file ? `${TWEMOJI_SVG_BASE}${file}.svg` : "";
+    }
+
 
     function cleanEditableNumberText(value) {
       // Keep a permissive "in-progress" decimal format while typing:
@@ -266,10 +285,13 @@
       label1.textContent = "통화";
       const wrap = document.createElement("div");
       wrap.className = "currency-row";
-      const flag = document.createElement("span");
+      const flag = document.createElement("img");
       flag.className = "flag-big";
       flag.id = `flag_${i + 1}`;
-      flag.textContent = flags[row.dataset.prevCode] || "";
+      flag.alt = "";
+      flag.decoding = "async";
+      flag.loading = "lazy";
+      flag.src = flagUrl(row.dataset.prevCode);
 
       const sel = document.createElement("select");
       sel.id = `currency_${i + 1}`;
@@ -277,7 +299,7 @@
       currencies.forEach((c) => {
         const opt = document.createElement("option");
         opt.value = c.code;
-        opt.textContent = `${c.flag} ${c.label}`;
+        opt.textContent = c.label;
         if (c.code === (DEFAULT_CODES[i] || "KRW")) opt.selected = true;
         sel.appendChild(opt);
       });
@@ -441,7 +463,7 @@
         f.sel.addEventListener("change", () => {
           const oldCode = getPrevCode(idx);
           const newCode = f.sel.value;
-          f.flag.textContent = flags[newCode] || "";
+          f.flag.src = flagUrl(newCode);
           const ok = applyEnabledState(ratesByType, fields);
           if (!ok) return;
 

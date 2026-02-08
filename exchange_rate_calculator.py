@@ -154,10 +154,10 @@ HTML_TEMPLATE = """
       gap: 10px;
     }
     .flag-big {
-      width: 34px;
-      text-align: center;
-      font-size: 22px;
-      line-height: 1;
+      width: 40px;
+      height: 28px;
+      object-fit: contain;
+      display: block;
       user-select: none;
     }
     .field input {
@@ -250,10 +250,10 @@ HTML_TEMPLATE = """
           <div>
             <label for="currency_{{ idx }}">통화</label>
             <div class="currency-row">
-              <span class="flag-big" id="flag_{{ idx }}" aria-hidden="true">{{ currency_flags[default_codes[idx - 1]] }}</span>
+              <img class="flag-big" id="flag_{{ idx }}" alt="" decoding="async" loading="lazy" />
               <select id="currency_{{ idx }}" class="currency-select">
                 {% for item in currencies %}
-                  <option value="{{ item.code }}" {% if item.code == default_codes[idx - 1] %}selected{% endif %}>{{ item.flag }} {{ item.label }}</option>
+                  <option value="{{ item.code }}" {% if item.code == default_codes[idx - 1] %}selected{% endif %}>{{ item.label }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -323,6 +323,25 @@ HTML_TEMPLATE = """
     // 사용자가 "마지막으로 금액을 입력한 칸"을 기준(source)으로 삼습니다.
     // 통화 셀렉트를 바꿀 때, 바꾼 칸이 source가 아니라면 그 칸의 금액이 변해야 UX가 자연스럽습니다.
     let lastEditedIndex = 0;
+
+    const TWEMOJI_SVG_BASE = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/";
+    const FLAG_SVG = {
+      KRW: "1f1f0-1f1f7",
+      USD: "1f1fa-1f1f8",
+      CNY: "1f1e8-1f1f3",
+      PHP: "1f1f5-1f1ed",
+      TWD: "1f1f9-1f1fc",
+      JPY: "1f1ef-1f1f5",
+      VND: "1f1fb-1f1f3",
+      THB: "1f1f9-1f1ed",
+      EUR: "1f1ea-1f1fa",
+      AUD: "1f1e6-1f1fa",
+    };
+
+    function flagUrl(code) {
+      const file = FLAG_SVG[code];
+      return file ? `${TWEMOJI_SVG_BASE}${file}.svg` : "";
+    }
 
     function setPrevCode(index, code) {
       fields[index].row.dataset.prevCode = code;
@@ -434,7 +453,7 @@ HTML_TEMPLATE = """
       fields.forEach((field, index) => {
         const code = field.select.value;
         field.titleLabel.textContent = `통화`;
-        field.flag.textContent = currencyFlags[code] || "";
+        field.flag.src = flagUrl(code);
       });
     }
 
