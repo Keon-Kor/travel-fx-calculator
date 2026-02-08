@@ -315,7 +315,7 @@ function formatKoreanTime(iso) {
   }
 }
 
-function renderHistory(list, onDelete, onClear) {
+function renderHistory(list, onDelete) {
   if (!savedEl) return;
 
   if (list.length === 0) {
@@ -332,17 +332,7 @@ function renderHistory(list, onDelete, onClear) {
 
   const title = document.createElement("div");
   title.className = "history-title";
-  title.textContent = `기록 (${list.length})`;
-
-  const clearBtn = document.createElement("button");
-  clearBtn.type = "button";
-  clearBtn.className = "saved-btn danger";
-  clearBtn.textContent = "전체 삭제";
-  clearBtn.addEventListener("click", onClear);
-
-  head.appendChild(title);
-  head.appendChild(clearBtn);
-  savedEl.appendChild(head);
+  title.textContent = `기록 (${list.length})`;\n  head.appendChild(title);\n  savedEl.appendChild(head);
 
   const ul = document.createElement("ul");
   ul.className = "saved-list";
@@ -371,7 +361,7 @@ function renderHistory(list, onDelete, onClear) {
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "saved-btn danger";
-    delBtn.textContent = "삭제";
+    delBtn.textContent = "지우기";
     delBtn.addEventListener("click", () => onDelete(idx));
 
     actions.appendChild(delBtn);
@@ -410,19 +400,12 @@ loadSnapshot()
 
     function rerenderHistory() {
       const list = loadHistory();
-      renderHistory(
-        list,
-        (idx) => {
+      renderHistory(list, (idx) => {
           const next = loadHistory();
           next.splice(idx, 1);
           saveHistory(next);
           rerenderHistory();
-        },
-        () => {
-          saveHistory([]);
-          rerenderHistory();
-        },
-      );
+        });
     }
 
     rerenderHistory();
@@ -540,3 +523,4 @@ loadSnapshot()
     }
     setVersionPill(null);
   });
+
