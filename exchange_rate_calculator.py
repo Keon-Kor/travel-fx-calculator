@@ -225,12 +225,36 @@ HTML_TEMPLATE = """
       padding: 11px 12px;
       font-size: 14px;
     }
+
+    body.kbd-open {
+      /* When the on-screen keyboard is open, keep at least ~3 rows visible. */
+      padding-top: calc(10px + env(safe-area-inset-top));
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+    body.kbd-open .wrap { padding: 14px 12px; }
+    body.kbd-open h1 { font-size: 20px; }
+    body.kbd-open .toolbar { margin: 8px 0 6px; gap: 6px; }
+    body.kbd-open .toolbar button, body.kbd-open .toolbar select {
+      min-height: 40px;
+      padding: 6px 10px;
+    }
+    body.kbd-open .grid { margin-top: 12px; gap: 8px; }
+    body.kbd-open .field { padding: 10px; gap: 8px; }
+    body.kbd-open .field input, body.kbd-open .field select {
+      min-height: 40px;
+      padding: 8px 10px;
+      font-size: 15px;
+    }
+    body.kbd-open .flag-big { width: 32px; height: 22px; }
+    body.kbd-open .meta { display: none; }
+
     @media (max-width: 760px) {
       .wrap {
         border-radius: 14px;
         padding: 16px 14px;
       }
       h1 { font-size: 24px; }
+      body.kbd-open .field { grid-template-columns: minmax(170px, 230px) 1fr; }
       .field { grid-template-columns: 1fr; }
       .subtitle { margin-bottom: 14px; font-size: 14px; }
       .toolbar { margin-bottom: 2px; }
@@ -314,6 +338,36 @@ HTML_TEMPLATE = """
     const removeFieldBtn = document.getElementById("remove_field");
     const rateTypeSelect = document.getElementById("rate_type");
     const fieldCountText = document.getElementById("field_count_text");
+
+    function updateKeyboardClass() {
+      const vv = window.visualViewport;
+      const baseH = window.innerHeight || 0;
+      const vvH = vv ? vv.height : baseH;
+      const ratio = baseH ? (vvH / baseH) : 1;
+
+      const ae = document.activeElement;
+      const tag = ae && ae.tagName ? ae.tagName.toLowerCase() : "";
+      const isEditing = tag === "input" || tag === "select" || tag === "textarea";
+
+      const openByViewport = vv ? (ratio < 0.78) : false;
+      document.body.classList.toggle("kbd-open", Boolean(isEditing && openByViewport) || (!vv && isEditing));
+    }
+
+    function setupKeyboardCompactMode() {
+      updateKeyboardClass();
+      window.addEventListener("focusin", updateKeyboardClass);
+      window.addEventListener("focusout", () => setTimeout(updateKeyboardClass, 80));
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", updateKeyboardClass);
+        window.visualViewport.addEventListener("scroll", updateKeyboardClass);
+      } else {
+        window.addEventListener("resize", updateKeyboardClass);
+      }
+    }
+
+    setupKeyboardCompactMode();
+
     const MIN_FIELDS = 1;
     const MAX_FIELDS = 4;
     let activeCount = 3;
