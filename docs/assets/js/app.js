@@ -147,6 +147,7 @@ function applyEnabledState(ratesByType, fields) {
 }
 
 function renderMeta(data) {
+  if (meta) meta.hidden = false;
   const typeLabel = rateTypeSelect.options[rateTypeSelect.selectedIndex]?.textContent || "";
 
   meta.replaceChildren();
@@ -332,7 +333,9 @@ function renderHistory(list, onDelete) {
 
   const title = document.createElement("div");
   title.className = "history-title";
-  title.textContent = `기록 (${list.length})`;\n  head.appendChild(title);\n  savedEl.appendChild(head);
+  title.textContent = `기록 (${list.length})`;
+  head.appendChild(title);
+  savedEl.appendChild(head);
 
   const ul = document.createElement("ul");
   ul.className = "saved-list";
@@ -381,7 +384,9 @@ async function loadSnapshot() {
   return await res.json();
 }
 
-loadSnapshot()\n  .then((data) => {\n    if (errorEl) { errorEl.style.display = "none"; errorEl.textContent = ""; }
+loadSnapshot()
+  .then((data) => {
+    if (errorEl) { errorEl.style.display = "none"; errorEl.textContent = ""; }
     setVersionPill(data);
 
     const ratesByType = data.rates_by_type;
@@ -522,6 +527,9 @@ loadSnapshot()\n  .then((data) => {\n    if (errorEl) { errorEl.style.display = 
     }
     setVersionPill(null);
   });
+
+
+
 
 
 
