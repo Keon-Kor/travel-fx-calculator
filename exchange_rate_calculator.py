@@ -243,8 +243,8 @@ HTML_TEMPLATE = """
     <h1>🧳 여행용 환율 계산기</h1>
 
     <section class="toolbar">
-      <button type="button" id="add_field">+ 칸 추가</button>
-      <button type="button" id="remove_field">- 칸 제거</button>
+      <button type="button" id="add_field">+ 통화 추가</button>
+      <button type="button" id="remove_field">- 통화 제거</button>
       <select id="rate_type">
         <option value="sale" selected>매매기준율</option>
         <option value="buy">현찰 사실 때</option>
@@ -797,3 +797,4 @@ def index() -> str:
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
