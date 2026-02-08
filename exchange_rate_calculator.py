@@ -16,9 +16,16 @@ from datetime import datetime
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, send_from_directory
 
 app = Flask(__name__)
+
+
+@app.get('/assets/<path:subpath>')
+def assets(subpath: str):
+    # Serve vendored assets under docs/assets (useful for local Flask runs).
+    base = Path(__file__).resolve().parent / 'docs' / 'assets'
+    return send_from_directory(base, subpath)
 
 NAVER_EXCHANGE_LIST_URL = "https://finance.naver.com/marketindex/exchangeList.naver"
 
@@ -45,6 +52,8 @@ HTML_TEMPLATE = """
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="format-detection" content="telephone=no" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'self';" />
   <title>🧳 여행용 환율 계산기</title>
   <style>
 
@@ -413,7 +422,7 @@ HTML_TEMPLATE = """
     // 통화 셀렉트를 바꿀 때, 바꾼 칸이 source가 아니라면 그 칸의 금액이 변해야 UX가 자연스럽습니다.
     let lastEditedIndex = 0;
 
-    const TWEMOJI_SVG_BASE = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/";
+    const TWEMOJI_SVG_BASE = "/assets/twemoji/svg/";
     const FLAG_SVG = {
       KRW: "1f1f0-1f1f7",
       USD: "1f1fa-1f1f8",
@@ -882,6 +891,10 @@ if __name__ == "__main__":
     debug = os.getenv("DEBUG", "").strip() in {"1", "true", "True", "yes", "YES"}
 
     app.run(host=host, port=port, debug=debug)
+
+
+
+
 
 
 
