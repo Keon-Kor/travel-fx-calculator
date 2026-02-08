@@ -53,11 +53,15 @@
       background: #fff;
       color: var(--text);
       font-weight: 800;
-      padding: 8px 12px;
+      height: 44px;
       min-height: 44px;
+      padding: 0 12px;
       cursor: pointer;
     }
     .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .toolbar select {
+      padding-right: 36px;
+}
     .toolbar .count { font-size: 13px; color: var(--muted); font-weight: 800; }
     .grid {
       display: flex;
@@ -109,7 +113,8 @@
       font-variant-numeric: tabular-nums;
       font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     }
-    .field select { -webkit-appearance: none; appearance: none; }
+    .field select {
+}
     .field input:focus, .field select:focus {
       outline: none;
       border-color: var(--accent);
@@ -145,9 +150,11 @@
     body.kbd-open h1 { font-size: 20px; }
     body.kbd-open .toolbar { margin: 8px 0 6px; gap: 6px; }
     body.kbd-open .toolbar button, body.kbd-open .toolbar select {
+      height: 40px;
       min-height: 40px;
-      padding: 6px 10px;
+      padding: 0 10px;
     }
+
     body.kbd-open .grid { margin-top: 12px; gap: 8px; }
     body.kbd-open .field { padding: 10px; gap: 8px; }
     body.kbd-open .field input, body.kbd-open .field select {
@@ -172,8 +179,8 @@
     <h1>🧳 여행용 환율 계산기</h1>
 
     <section class="toolbar">
-      <button type="button" id="add_field">+ 통화 추가</button>
-      <button type="button" id="remove_field">- 통화 제거</button>
+      <button type="button" id="add_field" aria-label="통화 추가" title="통화 추가">+ 추가</button>
+      <button type="button" id="remove_field" aria-label="통화 제거" title="통화 제거">- 제거</button>
       <select id="rate_type">
         <option value="sale" selected>매매기준율</option>
         <option value="buy">현찰 사실 때</option>
@@ -573,6 +580,9 @@
   </script>
 </body>
 </html>
+
+
+
 
 
 

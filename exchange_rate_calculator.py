@@ -100,36 +100,22 @@ HTML_TEMPLATE = """
       flex-wrap: wrap;
       margin-bottom: 8px;
     }
-    .toolbar button {
+    .toolbar button, .toolbar select {
       border: 1px solid #c9dafd;
       border-radius: 10px;
       background: #fff;
       color: var(--text);
-      font-weight: 700;
-      padding: 8px 12px;
+      font-weight: 800;
+      height: 44px;
       min-height: 44px;
+      padding: 0 12px;
       cursor: pointer;
-      touch-action: manipulation;
     }
-    .toolbar button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
     .toolbar select {
-      border: 1px solid #c9dafd;
-      border-radius: 10px;
-      background: #fff;
-      color: var(--text);
-      font-weight: 700;
-      padding: 8px 12px;
-      min-height: 44px;
-      font-size: 14px;
-    }
-    .toolbar .count {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 700;
-    }
+      padding-right: 36px;
+}
+    .toolbar .count { font-size: 13px; color: var(--muted); font-weight: 800; }
     .grid {
       display: flex;
       flex-direction: column;
@@ -192,9 +178,7 @@ HTML_TEMPLATE = """
       font-weight: 700;
       color: var(--text);
       background: #fff;
-      -webkit-appearance: none;
-      appearance: none;
-    }
+}
     .field select:focus {
       outline: none;
       border-color: var(--accent);
@@ -235,9 +219,11 @@ HTML_TEMPLATE = """
     body.kbd-open h1 { font-size: 20px; }
     body.kbd-open .toolbar { margin: 8px 0 6px; gap: 6px; }
     body.kbd-open .toolbar button, body.kbd-open .toolbar select {
+      height: 40px;
       min-height: 40px;
-      padding: 6px 10px;
+      padding: 0 10px;
     }
+
     body.kbd-open .grid { margin-top: 12px; gap: 8px; }
     body.kbd-open .field { padding: 10px; gap: 8px; }
     body.kbd-open .field input, body.kbd-open .field select {
@@ -267,8 +253,8 @@ HTML_TEMPLATE = """
     <h1>🧳 여행용 환율 계산기</h1>
 
     <section class="toolbar">
-      <button type="button" id="add_field">+ 통화 추가</button>
-      <button type="button" id="remove_field">- 통화 제거</button>
+      <button type="button" id="add_field" aria-label="통화 추가" title="통화 추가">+ 추가</button>
+      <button type="button" id="remove_field" aria-label="통화 제거" title="통화 제거">- 제거</button>
       <select id="rate_type">
         <option value="sale" selected>매매기준율</option>
         <option value="buy">현찰 사실 때</option>
@@ -851,4 +837,7 @@ def index() -> str:
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
+
+
 
