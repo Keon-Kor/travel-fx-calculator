@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>여행용 환율 계산기</title>
+  <style>
+    :root {
+      --bg1: #f8fbff;
+      --bg2: #eef5ff;
+      --card: #ffffff;
+      --line: #dbe7ff;
+      --text: #15223b;
+      --muted: #4e628b;
+      --accent: #2057d8;
+      --error-bg: #fff2f2;
+      --error-line: #ffb3b3;
+      --error-text: #8a1f1f;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 90% 10%, #dbe8ff 0%, transparent 42%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+      padding: calc(20px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+    }
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px 20px;
+      box-shadow: 0 10px 30px rgba(18, 45, 102, 0.08);
+    }
+    h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0 8px;
+    }
+    .toolbar button, .toolbar select {
+      border: 1px solid #c9dafd;
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 800;
+      padding: 8px 12px;
+      min-height: 44px;
+      cursor: pointer;
+    }
+    .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .toolbar .count { font-size: 13px; color: var(--muted); font-weight: 800; }
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .field {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fbfdff;
+      display: grid;
+      grid-template-columns: minmax(190px, 260px) 1fr;
+      gap: 10px;
+      align-items: end;
+    }
+    .field.hidden { display: none; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-weight: 800;
+    }
+    .currency-row { display: flex; align-items: center; gap: 10px; }
+    .flag-big { width: 34px; text-align: center; font-size: 22px; line-height: 1; user-select: none; }
+    .field input, .field select {
+      width: 100%;
+      border: 1px solid #c9dafd;
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-height: 46px;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      background: #fff;
+    }
+    .field select { -webkit-appearance: none; appearance: none; }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(32, 87, 216, 0.12);
+    }
+    .meta {
+      margin-top: 16px;
+      border: 1px dashed #c7d8ff;
+      border-radius: 12px;
+      background: #f7faff;
+      padding: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+    .error {
+      margin-top: 14px;
+      border: 1px solid var(--error-line);
+      border-radius: 12px;
+      background: var(--error-bg);
+      color: var(--error-text);
+      padding: 11px 12px;
+      font-size: 14px;
+    }
+    @media (max-width: 760px) {
+      .wrap { border-radius: 14px; padding: 16px 14px; }
+      h1 { font-size: 24px; }
+      .field { grid-template-columns: 1fr; }
+      .toolbar .count { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>여행용 환율 계산기</h1>
+
+    <section class="toolbar">
+      <button type="button" id="add_field">+ 칸 추가</button>
+      <button type="button" id="remove_field">- 칸 제거</button>
+      <select id="rate_type">
+        <option value="sale" selected>매매기준율</option>
+        <option value="buy">현찰 사실 때</option>
+        <option value="sell">현찰 파실 때</option>
+        <option value="send">송금 보내실 때</option>
+        <option value="receive">송금 받으실 때</option>
+      </select>
+      <span class="count" id="field_count_text"></span>
+    </section>
+
+    <section class="grid" id="grid"></section>
+
+    <section class="meta" id="meta"></section>
+    <div class="error" id="error" style="display:none;"></div>
+  </main>
+
+  <script>
+    const DEFAULT_CODES = ["USD", "KRW", "PHP", "EUR"];
+    const MIN_FIELDS = 1;
+    const MAX_FIELDS = 4;
+    let activeCount = 3;
+    let lastEditedIndex = 0;
+    let isSyncing = false;
+
+    const addFieldBtn = document.getElementById("add_field");
+    const removeFieldBtn = document.getElementById("remove_field");
+    const rateTypeSelect = document.getElementById("rate_type");
+    const fieldCountText = document.getElementById("field_count_text");
+    const grid = document.getElementById("grid");
+    const meta = document.getElementById("meta");
+    const errorEl = document.getElementById("error");
+
+    function asNumber(value) {
+      const cleaned = String(value).replace(/,/g, "").trim();
+      const n = Number.parseFloat(cleaned);
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    }
+
+    function toInputValue(value) {
+      if (!Number.isFinite(value) || value < 0) return "0";
+      const normalized = value.toFixed(4).replace(/\\.?0+$/, "");
+      const parts = normalized.split(".");
+      parts[0] = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",");
+      return parts.join(".");
+    }
+
+    function buildRow(i, currencies, flags) {
+      const row = document.createElement("div");
+      row.className = "field field-row";
+      row.dataset.index = String(i);
+      row.dataset.prevCode = DEFAULT_CODES[i] || "KRW";
+
+      const left = document.createElement("div");
+      const right = document.createElement("div");
+
+      const label1 = document.createElement("label");
+      label1.textContent = `기준 통화 ${i + 1}`;
+      const wrap = document.createElement("div");
+      wrap.className = "currency-row";
+      const flag = document.createElement("span");
+      flag.className = "flag-big";
+      flag.id = `flag_${i + 1}`;
+      flag.textContent = flags[row.dataset.prevCode] || "";
+
+      const sel = document.createElement("select");
+      sel.id = `currency_${i + 1}`;
+      currencies.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c.code;
+        opt.textContent = `${c.label} ${c.flag}`;
+        if (c.code === (DEFAULT_CODES[i] || "KRW")) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      wrap.appendChild(flag);
+      wrap.appendChild(sel);
+      left.appendChild(label1);
+      left.appendChild(wrap);
+
+      const label2 = document.createElement("label");
+      label2.textContent = "금액";
+      label2.htmlFor = `amount_${i + 1}`;
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.inputMode = "decimal";
+      inp.id = `amount_${i + 1}`;
+      inp.value = "0";
+
+      right.appendChild(label2);
+      right.appendChild(inp);
+
+      row.appendChild(left);
+      row.appendChild(right);
+      return { row, sel, inp, flag };
+    }
+
+    function refreshRows(fields) {
+      fields.forEach((f, idx) => f.row.classList.toggle("hidden", idx >= activeCount));
+      fieldCountText.textContent = `표시 중: ${activeCount} / ${MAX_FIELDS}`;
+      addFieldBtn.disabled = activeCount >= MAX_FIELDS;
+      removeFieldBtn.disabled = activeCount <= MIN_FIELDS;
+    }
+
+    function currentRates(ratesByType) {
+      const t = rateTypeSelect.value;
+      return ratesByType[t] || ratesByType["sale"];
+    }
+
+    function canConvertSelected(ratesByType, fields) {
+      const r = currentRates(ratesByType);
+      const activeFields = fields.slice(0, activeCount);
+      return activeFields.every((f) => Number.isFinite(r[f.sel.value]) && r[f.sel.value] > 0);
+    }
+
+    function convertAmount(ratesByType, amount, fromCode, toCode) {
+      if (fromCode === toCode) return amount;
+      const r = currentRates(ratesByType);
+      const inKrw = amount * r[fromCode];
+      return inKrw / r[toCode];
+    }
+
+    function applyEnabledState(ratesByType, fields) {
+      const ok = canConvertSelected(ratesByType, fields);
+      const activeFields = fields.slice(0, activeCount);
+      activeFields.forEach((f) => { f.inp.disabled = !ok; f.sel.disabled = false; });
+      fields.slice(activeCount).forEach((f) => { f.inp.disabled = true; f.sel.disabled = true; });
+      if (!ok) fieldCountText.textContent = `표시 중: ${activeCount} / ${MAX_FIELDS} (환율 데이터 부족)`;
+      return ok;
+    }
+
+    function updateFrom(ratesByType, fields, index) {
+      if (isSyncing) return;
+      isSyncing = true;
+
+      const activeFields = fields.slice(0, activeCount);
+      const source = activeFields[index];
+      if (!source) { isSyncing = false; return; }
+      const sourceCode = source.sel.value;
+      const sourceAmount = asNumber(source.inp.value);
+      source.inp.value = toInputValue(sourceAmount);
+
+      activeFields.forEach((f, i) => {
+        if (i === index) return;
+        const converted = convertAmount(ratesByType, sourceAmount, sourceCode, f.sel.value);
+        f.inp.value = toInputValue(converted);
+      });
+
+      isSyncing = false;
+    }
+
+    async function load() {
+      const res = await fetch(`./data/rates.json?t=${Date.now()}`);
+      if (!res.ok) throw new Error("rates.json not found");
+      return await res.json();
+    }
+
+    load().then((data) => {
+      const ratesByType = data.rates_by_type;
+      const currencies = data.currencies;
+      const flags = {};
+      currencies.forEach((c) => { flags[c.code] = c.flag; });
+
+      const fields = [];
+      for (let i = 0; i < MAX_FIELDS; i++) {
+        const f = buildRow(i, currencies, flags);
+        fields.push(f);
+        grid.appendChild(f.row);
+      }
+
+      function setPrevCode(i, code) { fields[i].row.dataset.prevCode = code; }
+      function getPrevCode(i) { return fields[i].row.dataset.prevCode || fields[i].sel.value; }
+      fields.forEach((f, i) => setPrevCode(i, f.sel.value));
+
+      fields.forEach((f, idx) => {
+        f.inp.addEventListener("input", () => { lastEditedIndex = idx; updateFrom(ratesByType, fields, idx); });
+        f.sel.addEventListener("change", () => {
+          const oldCode = getPrevCode(idx);
+          const newCode = f.sel.value;
+          f.flag.textContent = flags[newCode] || "";
+          const ok = applyEnabledState(ratesByType, fields);
+          if (!ok) return;
+
+          if (idx === lastEditedIndex) {
+            const r = currentRates(ratesByType);
+            const amountOld = asNumber(f.inp.value);
+            const krwValue = amountOld * r[oldCode];
+            const amountNew = krwValue / r[newCode];
+            f.inp.value = toInputValue(amountNew);
+            setPrevCode(idx, newCode);
+            updateFrom(ratesByType, fields, idx);
+            return;
+          }
+
+          setPrevCode(idx, newCode);
+          const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+          updateFrom(ratesByType, fields, sourceIndex);
+        });
+      });
+
+      rateTypeSelect.addEventListener("change", () => {
+        applyEnabledState(ratesByType, fields);
+        const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+        updateFrom(ratesByType, fields, sourceIndex);
+      });
+      addFieldBtn.addEventListener("click", () => {
+        if (activeCount >= MAX_FIELDS) return;
+        activeCount += 1;
+        refreshRows(fields);
+        applyEnabledState(ratesByType, fields);
+        const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+        updateFrom(ratesByType, fields, sourceIndex);
+      });
+      removeFieldBtn.addEventListener("click", () => {
+        if (activeCount <= MIN_FIELDS) return;
+        activeCount -= 1;
+        refreshRows(fields);
+        applyEnabledState(ratesByType, fields);
+        const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+        updateFrom(ratesByType, fields, sourceIndex);
+      });
+
+      refreshRows(fields);
+      applyEnabledState(ratesByType, fields);
+      updateFrom(ratesByType, fields, 0);
+
+      meta.innerHTML =
+        `환율 기준: <strong>${rateTypeSelect.options[rateTypeSelect.selectedIndex].textContent}</strong><br/>` +
+        `데이터: 네이버 환율표 (업데이트: ${data.fetched_at || "-"})`;
+    }).catch((e) => {
+      errorEl.style.display = "block";
+      errorEl.textContent = `환율 데이터를 불러오지 못했습니다: ${e.message}`;
+    });
+  </script>
+</body>
+</html>
+

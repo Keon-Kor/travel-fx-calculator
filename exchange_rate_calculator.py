@@ -12,8 +12,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-import json
-from datetime import date, datetime, timedelta
+from datetime import datetime
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -22,10 +21,6 @@ from flask import Flask, render_template_string
 app = Flask(__name__)
 
 NAVER_EXCHANGE_LIST_URL = "https://finance.naver.com/marketindex/exchangeList.naver"
-EXCHANGERATE_TIMESERIES_URL = "https://api.exchangerate.host/timeseries"
-
-# 간단 캐시(과도한 외부 호출 방지). 프로세스 재시작 시 초기화됩니다.
-_HIST_CACHE: dict[str, tuple[datetime, list[tuple[str, float]]]] = {}
 
 # `source_unit`:
 # - JPY/VND는 네이버에서 100단위 기준으로 제공되므로 1단위로 환산하기 위해 사용합니다.
@@ -33,6 +28,7 @@ _HIST_CACHE: dict[str, tuple[datetime, list[tuple[str, float]]]] = {}
 CURRENCY_META = {
     "KRW": {"label": "대한민국 원화 (KRW)", "flag": "🇰🇷", "market_code": None, "source_unit": 1},
     "USD": {"label": "미국 달러 (USD)", "flag": "🇺🇸", "market_code": "FX_USDKRW", "source_unit": 1},
+    "CNY": {"label": "중국 위안 (CNY)", "flag": "🇨🇳", "market_code": "FX_CNYKRW", "source_unit": 1},
     "PHP": {"label": "필리핀 페소 (PHP)", "flag": "🇵🇭", "market_code": "FX_PHPKRW", "source_unit": 1},
     "TWD": {"label": "대만 달러 (TWD)", "flag": "🇹🇼", "market_code": "FX_TWDKRW", "source_unit": 1},
     "JPY": {"label": "일본 엔화 (JPY)", "flag": "🇯🇵", "market_code": "FX_JPYKRW", "source_unit": 100},
@@ -152,17 +148,17 @@ HTML_TEMPLATE = """
       align-items: center;
       gap: 6px;
     }
-    .flag-chip {
-      display: inline-flex;
+    .currency-row {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      width: 20px;
-      height: 20px;
-      border-radius: 999px;
-      background: #edf3ff;
-      font-size: 13px;
+      gap: 10px;
+    }
+    .flag-big {
+      width: 34px;
+      text-align: center;
+      font-size: 22px;
       line-height: 1;
-      border: 1px solid #d6e3ff;
+      user-select: none;
     }
     .field input {
       width: 100%;
@@ -209,38 +205,6 @@ HTML_TEMPLATE = """
       line-height: 1.55;
       overflow-wrap: anywhere;
     }
-    .history {
-      margin-top: 16px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #ffffff;
-      padding: 12px;
-    }
-    .history h2 {
-      margin: 0 0 8px;
-      font-size: 16px;
-      letter-spacing: -0.01em;
-    }
-    .history .meme {
-      font-weight: 800;
-      color: #142a57;
-      margin: 6px 0 10px;
-    }
-    .history details {
-      margin-top: 8px;
-    }
-    .history table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    .history th, .history td {
-      border-top: 1px solid #eef3ff;
-      padding: 8px 6px;
-      text-align: right;
-      white-space: nowrap;
-    }
-    .history th:first-child, .history td:first-child { text-align: left; }
     .error {
       margin-top: 14px;
       border: 1px solid var(--error-line);
@@ -265,8 +229,7 @@ HTML_TEMPLATE = """
 </head>
 <body>
   <main class="wrap">
-    <h1>실시간 환율 계산기</h1>
-    <p class="subtitle">입력 칸은 최대 4개까지 추가할 수 있고, 한 칸의 값을 바꾸면 나머지 칸이 실시간으로 계산됩니다.</p>
+    <h1>여행용 환율 계산기</h1>
 
     <section class="toolbar">
       <button type="button" id="add_field">+ 칸 추가</button>
@@ -286,11 +249,14 @@ HTML_TEMPLATE = """
         <div class="field field-row" data-index="{{ idx - 1 }}">
           <div>
             <label for="currency_{{ idx }}">기준 통화 {{ idx }}</label>
-            <select id="currency_{{ idx }}" class="currency-select">
-              {% for item in currencies %}
-                <option value="{{ item.code }}" {% if item.code == default_codes[idx - 1] %}selected{% endif %}>{{ item.flag }} {{ item.label }}</option>
-              {% endfor %}
-            </select>
+            <div class="currency-row">
+              <span class="flag-big" id="flag_{{ idx }}" aria-hidden="true">{{ currency_flags[default_codes[idx - 1]] }}</span>
+              <select id="currency_{{ idx }}" class="currency-select">
+                {% for item in currencies %}
+                  <option value="{{ item.code }}" {% if item.code == default_codes[idx - 1] %}selected{% endif %}>{{ item.label }} {{ item.flag }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
           <div>
             <label for="amount_{{ idx }}">금액</label>
@@ -308,29 +274,10 @@ HTML_TEMPLATE = """
           <span>{{ item.flag }} 1 {{ item.code }} = {{ "{:,.4f}".format(rates_by_type["sale"][item.code]) }} KRW (매매기준율){% if not loop.last %}, {% endif %}</span>
         {% endfor %}
       </div>
-      <div>환율 종류: 네이버 금융의 <strong>매매기준율/현찰/송금</strong> 중 하나를 선택합니다. 변환은 선택된 기준을 동일하게 적용해 교차환산합니다.</div>
-      <div>참고: JPY, VND는 네이버의 100단위 기준 값을 1단위 기준으로 환산해 적용합니다.</div>
-    </section>
-
-    <section class="history">
-      <h2>최근 6개월 USD/KRW (일자별, 참고용)</h2>
-      <div class="meme">{{ hist_meme }}</div>
-      <div class="meta">
-        데이터 소스: exchangerate.host (시장환율 계열, 은행 거래 환율과 다를 수 있음)<br/>
-        기간: {{ hist_start }} ~ {{ hist_end }} ({{ hist_count }}일)
-      </div>
       <details>
-        <summary>일자별 보기</summary>
-        <table>
-          <thead>
-            <tr><th>일자</th><th>USD/KRW</th></tr>
-          </thead>
-          <tbody>
-            {% for d, v in hist_series %}
-              <tr><td>{{ d }}</td><td>{{ "{:,.4f}".format(v) }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <summary>설명 보기</summary>
+        <div>환율 종류: 네이버 금융의 <strong>매매기준율/현찰/송금</strong> 중 하나를 선택합니다. 변환은 선택된 기준을 동일하게 적용해 교차환산합니다.</div>
+        <div>참고: JPY, VND는 네이버의 100단위 기준 값을 1단위 기준으로 환산해 적용합니다.</div>
       </details>
     </section>
 
@@ -343,12 +290,14 @@ HTML_TEMPLATE = """
     // 서버에서 내려준 KRW 기준 환율표(기준 타입별).
     // 예: ratesByType["sale"]["USD"] = 1 USD 당 KRW (매매기준율)
     const ratesByType = {{ rates_by_type | tojson }};
+    const currencyFlags = {{ currency_flags | tojson }};
     const rowElements = Array.from(document.querySelectorAll(".field-row"));
     const fields = rowElements.map((row, index) => ({
       row,
       select: document.getElementById(`currency_${index + 1}`),
       input: document.getElementById(`amount_${index + 1}`),
-      titleLabel: row.querySelector(`label[for="currency_${index + 1}"]`)
+      titleLabel: row.querySelector(`label[for="currency_${index + 1}"]`),
+      flag: document.getElementById(`flag_${index + 1}`)
     }));
     const addFieldBtn = document.getElementById("add_field");
     const removeFieldBtn = document.getElementById("remove_field");
@@ -363,12 +312,25 @@ HTML_TEMPLATE = """
       return ratesByType[t] || ratesByType["sale"];
     }
 
-    function canConvertNow() {
+    function canConvertSelected() {
       const r = currentRates();
-      return Object.values(r).every((v) => Number.isFinite(v) && v > 0);
+      const activeFields = fields.slice(0, activeCount);
+      // 현재 화면에서 선택된 통화만 환율이 있으면 계산 가능
+      return activeFields.every((f) => Number.isFinite(r[f.select.value]) && r[f.select.value] > 0);
     }
     // 입력 이벤트가 연쇄적으로 재호출되는 것을 방지하는 락
     let isSyncing = false;
+    // 사용자가 "마지막으로 금액을 입력한 칸"을 기준(source)으로 삼습니다.
+    // 통화 셀렉트를 바꿀 때, 바꾼 칸이 source가 아니라면 그 칸의 금액이 변해야 UX가 자연스럽습니다.
+    let lastEditedIndex = 0;
+
+    function setPrevCode(index, code) {
+      fields[index].row.dataset.prevCode = code;
+    }
+
+    function getPrevCode(index) {
+      return fields[index].row.dataset.prevCode || fields[index].select.value;
+    }
 
     function asNumber(value) {
       // 사용자가 넣은 천단위 콤마를 제거하고 숫자로 변환
@@ -401,9 +363,9 @@ HTML_TEMPLATE = """
 
     function updateFieldLabels() {
       fields.forEach((field, index) => {
-        const optionText = field.select.options[field.select.selectedIndex]?.text || "";
-        const flag = optionText.trim().split(" ")[0] || "";
-        field.titleLabel.innerHTML = `기준 통화 ${index + 1} <span class="flag-chip">${flag}</span>`;
+        const code = field.select.value;
+        field.titleLabel.textContent = `기준 통화 ${index + 1}`;
+        field.flag.textContent = currencyFlags[code] || "";
       });
     }
 
@@ -444,6 +406,24 @@ HTML_TEMPLATE = """
       removeFieldBtn.disabled = activeCount <= MIN_FIELDS;
     }
 
+    function applyEnabledState() {
+      const ok = canConvertSelected();
+      const activeFields = fields.slice(0, activeCount);
+      // 환율이 부족해도 통화 선택/칸 추가제거는 가능하게 두고, 금액 입력만 막습니다.
+      activeFields.forEach((f) => {
+        f.input.disabled = !ok;
+        f.select.disabled = false;
+      });
+      // 숨겨진 칸은 이벤트가 남아있어도 입력 못 하게
+      fields.slice(activeCount).forEach((f) => {
+        f.input.disabled = true;
+        f.select.disabled = true;
+      });
+      if (!ok) {
+        fieldCountText.textContent = `표시 중: ${activeCount} / ${MAX_FIELDS} (환율 데이터 부족)`;
+      }
+    }
+
     function addField() {
       if (activeCount >= MAX_FIELDS) {
         return;
@@ -462,32 +442,61 @@ HTML_TEMPLATE = """
       updateFrom(0);
     }
 
-    if (canConvertNow()) {
-      fields.forEach((field, index) => {
-        field.input.addEventListener("input", () => updateFrom(index));
-        field.select.addEventListener("change", () => {
-          updateFieldLabels();
+    // 환율이 부분적으로만 있어도 UI는 조작 가능하게 유지합니다.
+    fields.forEach((field, index) => {
+      field.input.addEventListener("input", () => {
+        lastEditedIndex = index;
+        updateFrom(index);
+      });
+      field.select.addEventListener("change", () => {
+        const oldCode = getPrevCode(index);
+        const newCode = field.select.value;
+        updateFieldLabels();
+        applyEnabledState();
+        // UX 규칙:
+        // - 마지막 입력 칸이 '다른 칸'이면: 통화 바꾼 칸의 값이 변해야 함 (source 유지).
+        // - 마지막 입력 칸이 '바로 이 칸'이면: 동일 가치(원화 환산)를 유지한 채 표기 통화만 변경.
+        if (index === lastEditedIndex) {
+          const r = currentRates();
+          const amountOld = asNumber(field.input.value);
+          const krwValue = amountOld * r[oldCode];
+          const amountNew = krwValue / r[newCode];
+          field.input.value = toInputValue(amountNew);
+          setPrevCode(index, newCode);
           updateFrom(index);
-        });
+          return;
+        }
+
+        setPrevCode(index, newCode);
+        const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+        updateFrom(sourceIndex);
       });
-      rateTypeSelect.addEventListener("change", () => updateFrom(0));
-      addFieldBtn.addEventListener("click", addField);
-      removeFieldBtn.addEventListener("click", removeField);
+    });
+    rateTypeSelect.addEventListener("change", () => {
+      applyEnabledState();
+      const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+      updateFrom(sourceIndex);
+    });
+    addFieldBtn.addEventListener("click", () => {
+      addField();
       updateFieldLabels();
-      refreshRows();
-      updateFrom(0);
-    } else {
-      fields.forEach((field) => {
-        field.input.disabled = true;
-        field.select.disabled = true;
-      });
-      rateTypeSelect.disabled = true;
-      addFieldBtn.disabled = true;
-      removeFieldBtn.disabled = true;
-      fieldCountText.textContent = "환율 조회 실패";
+      applyEnabledState();
+      const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+      updateFrom(sourceIndex);
+    });
+    removeFieldBtn.addEventListener("click", () => {
+      removeField();
       updateFieldLabels();
-      refreshRows();
-    }
+      applyEnabledState();
+      const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
+      updateFrom(sourceIndex);
+    });
+    updateFieldLabels();
+    // 초기 prevCode 세팅
+    fields.forEach((f, idx) => setPrevCode(idx, f.select.value));
+    refreshRows();
+    applyEnabledState();
+    updateFrom(0);
   </script>
 </body>
 </html>
@@ -505,11 +514,15 @@ class RateSnapshot:
 
 def _parse_market_row(html: str, market_code: str) -> str:
     """환율 목록 HTML에서 지정 코드의 행(tr) 블록을 파싱합니다."""
-    pattern = rf"<tr[^>]*>.*?marketindexCd={market_code}.*?</tr>"
-    match = re.search(pattern, html, flags=re.DOTALL)
-    if not match:
-        raise ValueError(f"환율 코드를 찾을 수 없습니다: {market_code}")
-    return match.group(0)
+    # 정규식으로 "한 행"만 안전하게 뽑아야 합니다.
+    # `.*?marketindexCd=...` 같은 패턴은 행 경계를 넘어 다음 행까지 먹어버릴 수 있어
+    # USD 값이 다른 통화에 복사되는(1:1 변환) 치명 버그가 생깁니다.
+    for m in re.finditer(r"<tr>\s*.*?</tr>", html, flags=re.DOTALL):
+        row = m.group(0)
+        if f"marketindexCd={market_code}" in row and 'class="tit"' in row:
+            return row
+
+    raise ValueError(f"환율 코드를 찾을 수 없습니다: {market_code}")
 
 
 def _parse_rate(row_html: str) -> float:
@@ -528,12 +541,30 @@ def _parse_rate_time(row_html: str) -> str | None:
     return match.group(1).strip()
 
 
-def _parse_td_value(row_html: str, td_class: str) -> float:
-    """행 HTML에서 특정 컬럼(td class)의 숫자를 추출합니다."""
-    match = re.search(rf"<td class=\\\"{td_class}\\\">([^<]+)</td>", row_html)
-    if not match:
-        raise ValueError(f"{td_class} 값을 파싱할 수 없습니다.")
-    return float(match.group(1).strip().replace(",", ""))
+def _parse_row_numbers(row_html: str) -> list[float]:
+    """데이터 행에서 숫자 컬럼을 순서대로 파싱합니다.
+
+    네이버 환율표 데이터 행 구조(대략):
+    - td.tit: 통화명
+    - td.sale: 매매기준율
+    - td: 현찰 사실 때
+    - td: 현찰 파실 때
+    - td: 송금 보내실 때
+    - td: 송금 받으실 때
+    - td: 미화환산율
+    """
+    tds = re.findall(r"<td[^>]*>\s*([^<]+?)\s*</td>", row_html, flags=re.DOTALL)
+    # td.tit까지 포함될 수 있으므로 숫자만 필터링합니다.
+    numbers: list[float] = []
+    for raw in tds:
+        cleaned = raw.strip().replace(",", "")
+        if cleaned == "" or cleaned == "-":
+            continue
+        try:
+            numbers.append(float(cleaned))
+        except ValueError:
+            continue
+    return numbers
 
 
 def fetch_naver_rates() -> RateSnapshot:
@@ -567,16 +598,18 @@ def fetch_naver_rates() -> RateSnapshot:
 
         row_html = _parse_market_row(html, market_code)
 
-        # 네이버 표의 컬럼: sale(매매기준율), buy/sell(현찰), send/receive(송금)
-        for rate_type, td_class in [
-            ("sale", "sale"),
-            ("buy", "buy"),
-            ("sell", "sell"),
-            ("send", "send"),
-            ("receive", "receive"),
-        ]:
-            raw = _parse_td_value(row_html, td_class)
-            rates_by_type[rate_type][code] = raw / source_unit
+        # 숫자 컬럼을 열 순서대로 파싱해 매핑합니다.
+        # 기대하는 숫자 컬럼 순서: [매매기준율, 사실 때, 파실 때, 보내실 때, 받으실 때, 미화환산율]
+        cols = _parse_row_numbers(row_html)
+        if len(cols) < 5:
+            raise RuntimeError(f"환율 컬럼 파싱 실패: {code} (cols={cols})")
+
+        sale, buy, sell, send, receive = cols[0], cols[1], cols[2], cols[3], cols[4]
+        rates_by_type["sale"][code] = sale / source_unit
+        rates_by_type["buy"][code] = buy / source_unit
+        rates_by_type["sell"][code] = sell / source_unit
+        rates_by_type["send"][code] = send / source_unit
+        rates_by_type["receive"][code] = receive / source_unit
 
         if source_time_text is None:
             source_time_text = _parse_rate_time(row_html)
@@ -587,39 +620,6 @@ def fetch_naver_rates() -> RateSnapshot:
         source_time_text=source_time_text,
         fetched_at_text=fetched_at_text,
     )
-
-
-def fetch_usdkrw_history(days: int = 183) -> list[tuple[str, float]]:
-    """최근 N일(대략 6개월) USD/KRW 일자별 환율을 가져옵니다(참고용, 외부 API)."""
-    cache_key = f"usdkrw:{days}"
-    now = datetime.now()
-    cached = _HIST_CACHE.get(cache_key)
-    if cached and (now - cached[0]).total_seconds() < 6 * 3600:
-        return cached[1]
-
-    end = date.today()
-    start = end - timedelta(days=days)
-    url = (
-        f"{EXCHANGERATE_TIMESERIES_URL}"
-        f"?start_date={start.isoformat()}&end_date={end.isoformat()}"
-        f"&base=USD&symbols=KRW"
-    )
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(req, timeout=15) as response:
-        payload = json.loads(response.read().decode("utf-8", errors="ignore"))
-
-    rates = payload.get("rates", {})
-    series: list[tuple[str, float]] = []
-    for d, obj in rates.items():
-        try:
-            v = float(obj["KRW"])
-        except Exception:
-            continue
-        series.append((d, v))
-
-    series.sort(key=lambda x: x[0])
-    _HIST_CACHE[cache_key] = (now, series)
-    return series
 
 
 @app.route("/", methods=["GET"])
@@ -635,6 +635,7 @@ def index() -> str:
     }
     rate_time_text = "조회 실패"
     currencies = [{"code": code, "label": meta["label"], "flag": meta["flag"]} for code, meta in CURRENCY_META.items()]
+    currency_flags = {code: meta["flag"] for code, meta in CURRENCY_META.items()}
     default_codes = ["USD", "KRW", "PHP", "EUR"]
 
     try:
@@ -647,48 +648,14 @@ def index() -> str:
     except Exception as exc:
         error = f"환율 조회에 실패했습니다: {exc}"
 
-    # 6개월 히스토리(참고용) + 밈
-    hist_series: list[tuple[str, float]] = []
-    hist_meme = "데이터를 불러오는 중..."
-    hist_start = ""
-    hist_end = ""
-    try:
-        hist_series = fetch_usdkrw_history(days=183)
-        if hist_series:
-            hist_start = hist_series[0][0]
-            hist_end = hist_series[-1][0]
-            today_rate = hist_series[-1][1]
-            min_day, min_rate = min(hist_series, key=lambda x: x[1])
-            max_day, max_rate = max(hist_series, key=lambda x: x[1])
-
-            if today_rate > min_rate:
-                diff = today_rate - min_rate
-                hist_meme = (
-                    f"아 그때({min_day}) 달러 샀으면 지금보다 {diff:,.2f}원/달러 싸게 샀는데..."
-                    f" (최저 {min_rate:,.2f}, 오늘 {today_rate:,.2f})"
-                )
-            else:
-                hist_meme = f"지금이 그때다. (최저={min_rate:,.2f}, 오늘={today_rate:,.2f})"
-
-            # 범위 정보도 같이 보이게(짧게)
-            hist_meme += f" / 6개월 고점({max_day}) {max_rate:,.2f}"
-        else:
-            hist_meme = "최근 6개월 데이터를 가져오지 못했습니다."
-    except Exception:
-        hist_meme = "최근 6개월 데이터를 가져오지 못했습니다."
-
     return render_template_string(
         HTML_TEMPLATE,
         error=error,
         rates_by_type=rates_by_type,
         currencies=currencies,
+        currency_flags=currency_flags,
         default_codes=default_codes,
         rate_time_text=rate_time_text,
-        hist_series=hist_series,
-        hist_meme=hist_meme,
-        hist_start=hist_start,
-        hist_end=hist_end,
-        hist_count=len(hist_series),
     )
 
 

@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 cloudflared.exe
+.env
+cloudflared.log
+*.eml

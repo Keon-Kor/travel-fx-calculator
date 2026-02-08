@@ -1,0 +1,128 @@
+{
+  "fetched_at": "2026-02-08T02:55:32+00:00",
+  "source": "https://finance.naver.com/marketindex/exchangeList.naver",
+  "rates_by_type": {
+    "sale": {
+      "KRW": 1.0,
+      "USD": 1465.5,
+      "CNY": 211.49,
+      "PHP": 25.03,
+      "TWD": 46.39,
+      "JPY": 9.3216,
+      "VND": 0.0567,
+      "THB": 46.52,
+      "EUR": 1731.78,
+      "AUD": 1028.27
+    },
+    "buy": {
+      "KRW": 1.0,
+      "USD": 1491.14,
+      "CNY": 222.06,
+      "PHP": 27.53,
+      "TWD": 52.46,
+      "JPY": 9.4847,
+      "VND": 0.0633,
+      "THB": 48.84,
+      "EUR": 1766.24,
+      "AUD": 1048.52
+    },
+    "sell": {
+      "KRW": 1.0,
+      "USD": 1439.86,
+      "CNY": 200.92,
+      "PHP": 22.98,
+      "TWD": 41.76,
+      "JPY": 9.1585,
+      "VND": 0.0501,
+      "THB": 43.73,
+      "EUR": 1697.32,
+      "AUD": 1008.02
+    },
+    "send": {
+      "KRW": 1.0,
+      "USD": 1479.8,
+      "CNY": 213.6,
+      "PHP": 25.28,
+      "TWD": 46.9,
+      "JPY": 9.4129,
+      "VND": 0.0572,
+      "THB": 46.98,
+      "EUR": 1749.09,
+      "AUD": 1038.55
+    },
+    "receive": {
+      "KRW": 1.0,
+      "USD": 1451.2,
+      "CNY": 209.38,
+      "PHP": 24.78,
+      "TWD": 45.88,
+      "JPY": 9.2303,
+      "VND": 0.0562,
+      "THB": 46.06,
+      "EUR": 1714.47,
+      "AUD": 1017.99
+    }
+  },
+  "currencies": [
+    {
+      "code": "KRW",
+      "label": "대한민국 원화 (KRW)",
+      "flag": "🇰🇷",
+      "source_unit": 1
+    },
+    {
+      "code": "USD",
+      "label": "미국 달러 (USD)",
+      "flag": "🇺🇸",
+      "source_unit": 1
+    },
+    {
+      "code": "CNY",
+      "label": "중국 위안 (CNY)",
+      "flag": "🇨🇳",
+      "source_unit": 1
+    },
+    {
+      "code": "PHP",
+      "label": "필리핀 페소 (PHP)",
+      "flag": "🇵🇭",
+      "source_unit": 1
+    },
+    {
+      "code": "TWD",
+      "label": "대만 달러 (TWD)",
+      "flag": "🇹🇼",
+      "source_unit": 1
+    },
+    {
+      "code": "JPY",
+      "label": "일본 엔화 (JPY)",
+      "flag": "🇯🇵",
+      "source_unit": 100
+    },
+    {
+      "code": "VND",
+      "label": "베트남 동 (VND)",
+      "flag": "🇻🇳",
+      "source_unit": 100
+    },
+    {
+      "code": "THB",
+      "label": "태국 바트 (THB)",
+      "flag": "🇹🇭",
+      "source_unit": 1
+    },
+    {
+      "code": "EUR",
+      "label": "유로 (EUR)",
+      "flag": "🇪🇺",
+      "source_unit": 1
+    },
+    {
+      "code": "AUD",
+      "label": "호주 달러 (AUD)",
+      "flag": "🇦🇺",
+      "source_unit": 1
+    }
+  ]
+}
