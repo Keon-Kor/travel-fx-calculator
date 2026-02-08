@@ -48,6 +48,7 @@ HTML_TEMPLATE = """
   <title>🧳 여행용 환율 계산기</title>
   <style>
 
+    
     :root {
       --bg1: #f3f8ff;
       --bg2: #eaf2ff;
@@ -62,21 +63,8 @@ HTML_TEMPLATE = """
       --error-line: #ffb3b3;
       --error-text: #8a1f1f;
     }
-
-* { box-sizing: border-box; }
-    .sr-only {
-      position: absolute !important;
-      width: 1px !important;
-      height: 1px !important;
-      padding: 0 !important;
-      margin: -1px !important;
-      overflow: hidden !important;
-      clip: rect(0, 0, 0, 0) !important;
-      white-space: nowrap !important;
-      border: 0 !important;
-    }
+    * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
-
     body {
       margin: 0;
       font-family: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
@@ -89,8 +77,8 @@ HTML_TEMPLATE = """
       min-height: 100vh;
       padding: calc(22px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
     }
-
     .wrap {
+      position: relative;
       max-width: 820px;
       margin: 0 auto;
       background: var(--card);
@@ -101,22 +89,42 @@ HTML_TEMPLATE = """
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
     }
-
-    h1 { margin: 0; font-size: 30px; letter-spacing: -0.03em; }
-
-.subtitle { margin: 8px 0 18px; color: var(--muted); }
+    .version-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      color: rgba(11,27,58,0.70);
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(47, 124, 255, 0.18);
+      border-radius: 999px;
+      padding: 6px 10px;
+      user-select: none;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: -0.03em;
+      padding-right: 90px; /* prevent overlap with version badge */
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
     .toolbar {
       display: flex;
       gap: 8px;
       align-items: center;
       flex-wrap: wrap;
-      margin-bottom: 8px;
+      margin: 14px 0 10px;
     }
-
     .toolbar button, .toolbar select {
       border: 1px solid rgba(47, 124, 255, 0.22);
       border-radius: 12px;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.90);
       color: var(--text);
       font-weight: 900;
       height: 46px;
@@ -124,94 +132,82 @@ HTML_TEMPLATE = """
       padding: 0 14px;
       cursor: pointer;
       box-shadow: 0 10px 18px rgba(11, 27, 58, 0.06);
+      line-height: 1;
     }
+    .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .toolbar select { padding-right: 36px; }
+    .toolbar .count { font-size: 13px; color: var(--muted); font-weight: 900; }
 
-.toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .toolbar select {
-      padding-right: 36px;
-}
-    .toolbar .count { font-size: 13px; color: var(--muted); font-weight: 800; }
     .grid {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-top: 18px;
+      gap: 12px;
+      margin-top: 16px;
     }
-
     .field {
       border: 1px solid var(--line);
       border-radius: 16px;
       padding: 14px;
       background: rgba(255,255,255,0.72);
       display: grid;
-      grid-template-columns: minmax(210px, 280px) 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(140px, 220px);
       gap: 12px;
       align-items: end;
       box-shadow: 0 8px 22px rgba(11, 27, 58, 0.06);
     }
+    .field > div { min-width: 0; }
+    .field.hidden { display: none; }
 
-.field.hidden { display: none; }
-    .field label {
-      display: block;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 8px;
-      font-weight: 700;
+    /* Labels are kept for accessibility but hidden from the visual UI. */
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
     }
-    .currency-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .currency-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+
+    .currency-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .currency-row select { min-width: 0; }
     .flag-big {
       width: 40px;
       height: 28px;
       object-fit: contain;
       display: block;
       user-select: none;
+      flex: 0 0 auto;
     }
-    .field input {
+
+    .field input, .field select {
       width: 100%;
-      border: 1px solid #c9dafd;
-      border-radius: 10px;
-      padding: 10px 12px;
-      min-height: 46px;
-      font-size: 16px;
-      font-weight: 700;
+      border: 1px solid rgba(47, 124, 255, 0.24);
+      border-radius: 14px;
+      padding: 12px 14px;
+      min-height: 50px;
+      font-size: 17px;
+      font-weight: 900;
       color: var(--text);
-      background: #fff;
+      background: rgba(255,255,255,0.95);
+      font-variant-numeric: tabular-nums;
+      font-family: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     }
-    .field select {
-      width: 100%;
-      border: 1px solid #c9dafd;
-      border-radius: 10px;
-      padding: 10px 12px;
-      min-height: 46px;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text);
-      background: #fff;
-}
-    .field select:focus {
+    .field input { text-align: right; }
+
+    .field input:focus, .field select:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(32, 87, 216, 0.12);
+      box-shadow: 0 0 0 3px rgba(47, 124, 255, 0.14);
     }
-    .field input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(32, 87, 216, 0.12);
-    }
+
     .meta {
       margin-top: 16px;
-      border: 1px dashed #c7d8ff;
-      border-radius: 12px;
-      background: #f7faff;
+      border: 1px dashed rgba(47, 124, 255, 0.25);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.65);
       padding: 12px;
       font-size: 13px;
       color: var(--muted);
@@ -221,51 +217,33 @@ HTML_TEMPLATE = """
     .error {
       margin-top: 14px;
       border: 1px solid var(--error-line);
-      border-radius: 12px;
+      border-radius: 14px;
       background: var(--error-bg);
       color: var(--error-text);
       padding: 11px 12px;
       font-size: 14px;
     }
 
-    body.kbd-open {
-      /* When the on-screen keyboard is open, keep at least ~3 rows visible. */
-      padding-top: calc(10px + env(safe-area-inset-top));
-      padding-bottom: calc(10px + env(safe-area-inset-bottom));
-    }
-
-body.kbd-open h1 { font-size: 20px; }
-    body.kbd-open .toolbar { margin: 8px 0 6px; gap: 6px; }
+    body.kbd-open .wrap { padding: 14px 12px; border-radius: 16px; }
     body.kbd-open h1 { font-size: 20px; }
     body.kbd-open .toolbar button, body.kbd-open .toolbar select {
       height: 40px;
       min-height: 40px;
       padding: 0 10px;
       box-shadow: 0 6px 12px rgba(11, 27, 58, 0.05);
-body.kbd-open .grid { margin-top: 12px; gap: 8px; }
-    body.kbd-open .field { padding: 10px; gap: 8px; }
-    body.kbd-open .field input, body.kbd-open .field select {
-      min-height: 40px;
-      padding: 8px 10px;
-      font-size: 15px;
     }
+    body.kbd-open .field { padding: 10px; border-radius: 14px; gap: 10px; }
+    body.kbd-open .field input, body.kbd-open .field select { min-height: 40px; padding: 8px 10px; font-size: 15px; }
     body.kbd-open .flag-big { width: 32px; height: 22px; }
     body.kbd-open .meta { display: none; }
 
     @media (max-width: 760px) {
       .wrap { border-radius: 18px; padding: 18px 16px; }
-      h1 { font-size: 26px; }
+      h1 { font-size: 26px; padding-right: 80px; }
       .field { grid-template-columns: 1fr; }
       .toolbar .count { width: 100%; }
     }
 
-h1 { font-size: 24px; }
-      body.kbd-open .field { grid-template-columns: minmax(170px, 230px) 1fr; }
-      .field { grid-template-columns: 1fr; }
-      .subtitle { margin-bottom: 14px; font-size: 14px; }
-      .toolbar { margin-bottom: 2px; }
-      .toolbar .count { width: 100%; }
-    }
   </style>
 </head>
 <body>
@@ -344,6 +322,10 @@ h1 { font-size: 24px; }
     const removeFieldBtn = document.getElementById("remove_field");
     const rateTypeSelect = document.getElementById("rate_type");
     const fieldCountText = document.getElementById("field_count_text");
+
+    const UI_BUILD = "2026-02-08T10:50:32Z";
+    const versionBadge = document.getElementById("version_badge");
+    if (versionBadge) versionBadge.textContent = `v ${UI_BUILD}`;
 
     function updateKeyboardClass() {
       const vv = window.visualViewport;
