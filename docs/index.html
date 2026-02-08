@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="format-detection" content="telephone=no" />
-  <title>여행용 환율 계산기</title>
+  <title>🧳 여행용 환율 계산기</title>
   <style>
     :root {
       --bg1: #f8fbff;
@@ -84,7 +84,14 @@
       font-weight: 800;
     }
     .currency-row { display: flex; align-items: center; gap: 10px; }
-    .flag-big { width: 34px; text-align: center; font-size: 22px; line-height: 1; user-select: none; }
+    .flag-big {
+      width: 40px;
+      text-align: center;
+      font-size: 24px;
+      line-height: 1;
+      user-select: none;
+      font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+    }
     .field input, .field select {
       width: 100%;
       border: 1px solid #c9dafd;
@@ -95,6 +102,8 @@
       font-weight: 800;
       color: var(--text);
       background: #fff;
+      font-variant-numeric: tabular-nums;
+      font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     }
     .field select { -webkit-appearance: none; appearance: none; }
     .field input:focus, .field select:focus {
@@ -132,7 +141,7 @@
 </head>
 <body>
   <main class="wrap">
-    <h1>여행용 환율 계산기</h1>
+    <h1>🧳 여행용 환율 계산기</h1>
 
     <section class="toolbar">
       <button type="button" id="add_field">+ 칸 추가</button>
@@ -254,7 +263,7 @@
       const right = document.createElement("div");
 
       const label1 = document.createElement("label");
-      label1.textContent = `기준 통화 ${i + 1}`;
+      label1.textContent = "통화";
       const wrap = document.createElement("div");
       wrap.className = "currency-row";
       const flag = document.createElement("span");
@@ -264,10 +273,11 @@
 
       const sel = document.createElement("select");
       sel.id = `currency_${i + 1}`;
+      label1.htmlFor = sel.id;
       currencies.forEach((c) => {
         const opt = document.createElement("option");
         opt.value = c.code;
-        opt.textContent = `${c.label} ${c.flag}`;
+        opt.textContent = `${c.flag} ${c.label}`;
         if (c.code === (DEFAULT_CODES[i] || "KRW")) opt.selected = true;
         sel.appendChild(opt);
       });
@@ -339,19 +349,16 @@
       return parts.join(".");
     }
 
-    function renderMeta(data, ratesByType) {
+    function renderMeta(data) {
       const typeLabel = rateTypeSelect.options[rateTypeSelect.selectedIndex]?.textContent ?? "";
-      const r = currentRates(ratesByType);
-      const lines = (data.currencies || [])
-        .filter((c) => c.code !== "KRW")
-        .map((c) => `${c.flag} 1 ${c.code} = ${formatRateValue(r[c.code])} KRW`)
-        .join("<br/>");
+      const sourceText = data.source ? `출처: 네이버 금융 (${data.source})` : "출처: 네이버 금융";
 
       meta.innerHTML =
         `환율 기준: <strong>${typeLabel}</strong><br/>` +
-        `업데이트: ${data.fetched_at || "-"}<br/><br/>` +
-        `${lines}`;
+        `업데이트: ${data.fetched_at || "-"}<br/>` +
+        sourceText;
     }
+
 
     function updateFrom(ratesByType, fields, index, preserveSourceCaret = false, sourceOldText = "", sourceOldCaret = 0) {
       if (isSyncing) return;
@@ -457,7 +464,7 @@
 
       rateTypeSelect.addEventListener("change", () => {
         applyEnabledState(ratesByType, fields);
-        renderMeta(data, ratesByType);
+        renderMeta(data);
         const sourceIndex = Math.min(lastEditedIndex, activeCount - 1);
         updateFrom(ratesByType, fields, sourceIndex);
       });
@@ -482,7 +489,7 @@
       applyEnabledState(ratesByType, fields);
       updateFrom(ratesByType, fields, 0);
 
-      renderMeta(data, ratesByType);
+      renderMeta(data);
     }).catch((e) => {
       errorEl.style.display = "block";
       errorEl.textContent = `환율 데이터를 불러오지 못했습니다: ${e.message}`;

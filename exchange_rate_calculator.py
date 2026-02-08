@@ -45,7 +45,7 @@ HTML_TEMPLATE = """
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="format-detection" content="telephone=no" />
-  <title>환율 계산기</title>
+  <title>🧳 여행용 환율 계산기</title>
   <style>
     :root {
       --bg1: #f8fbff;
@@ -229,7 +229,7 @@ HTML_TEMPLATE = """
 </head>
 <body>
   <main class="wrap">
-    <h1>여행용 환율 계산기</h1>
+    <h1>🧳 여행용 환율 계산기</h1>
 
     <section class="toolbar">
       <button type="button" id="add_field">+ 칸 추가</button>
@@ -248,12 +248,12 @@ HTML_TEMPLATE = """
       {% for idx in range(1, 5) %}
         <div class="field field-row" data-index="{{ idx - 1 }}">
           <div>
-            <label for="currency_{{ idx }}">기준 통화 {{ idx }}</label>
+            <label for="currency_{{ idx }}">통화</label>
             <div class="currency-row">
               <span class="flag-big" id="flag_{{ idx }}" aria-hidden="true">{{ currency_flags[default_codes[idx - 1]] }}</span>
               <select id="currency_{{ idx }}" class="currency-select">
                 {% for item in currencies %}
-                  <option value="{{ item.code }}" {% if item.code == default_codes[idx - 1] %}selected{% endif %}>{{ item.label }} {{ item.flag }}</option>
+                  <option value="{{ item.code }}" {% if item.code == default_codes[idx - 1] %}selected{% endif %}>{{ item.flag }} {{ item.label }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -433,7 +433,7 @@ HTML_TEMPLATE = """
     function updateFieldLabels() {
       fields.forEach((field, index) => {
         const code = field.select.value;
-        field.titleLabel.textContent = `기준 통화 ${index + 1}`;
+        field.titleLabel.textContent = `통화`;
         field.flag.textContent = currencyFlags[code] || "";
       });
     }
